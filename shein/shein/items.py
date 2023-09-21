@@ -9,6 +9,7 @@ import scrapy
 class SheinItem(scrapy.Item):
     # define the fields for your item here like:
     link = scrapy.Field()
+    main_image= scrapy.Field()
     image1=scrapy.Field()
     image2=scrapy.Field()
     image3=scrapy.Field()

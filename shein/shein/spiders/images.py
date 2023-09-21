@@ -55,7 +55,7 @@ class ImagesSpider(scrapy.Spider):
         
         slug=response.meta.get('slug')
         data = response.json()
-        
+        main_image = data['data'][f'{slug}']['main_image']['origin_image']
         for counter , i in enumerate(data['data'][f'{slug}']['detail_image'],start=1):
             image_url=i['origin_image']
             image_url=image_url.strip().replace('//','')
@@ -63,6 +63,7 @@ class ImagesSpider(scrapy.Spider):
             items['link'] = response.meta.get('link')
             items[f'image{counter}'] = image_url
             
+        items['main_image']= main_image.replace('//','')
         yield items
             
 

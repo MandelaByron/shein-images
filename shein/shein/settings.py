@@ -94,6 +94,7 @@ FEED_EXPORT_ENCODING = "utf-8"
 FEED_EXPORT_FIELDS=[
     
     'link',
+    'main_image',
     'image1',
     'image2',
     'image3',
