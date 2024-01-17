@@ -4,7 +4,8 @@
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
-
+from scrapy.downloadermiddlewares.retry import RetryMiddleware
+from scrapy.utils.response import response_status_message
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
 
@@ -101,3 +102,41 @@ class SheinDownloaderMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
+# middlewares.py
+
+
+
+# class CustomRetryMiddleware(RetryMiddleware):
+#     def process_exception(self, request, exception, spider):
+#         if isinstance(exception, KeyError) and 'info' in str(exception):
+#             # Log the error if needed
+#             spider.logger.error(f"Caught KeyError: 'info' for {request}")
+            
+#             # Retry the request
+#             return self._retry(request, exception, spider) or super().process_exception(request, exception, spider)
+#         return super().process_exception(request, exception, spider)
+# # middlewares.py
+
+
+
+class CustomRetryMiddleware(RetryMiddleware):
+    def process_exception(self, request, exception, spider):
+        #if isinstance(exception, KeyError):
+            # Log the error
+        spider.logger.error(f"Caught KeyError: 'info' for {request}")
+        print(f"Caught KeyError: 'info' for {request}")
+
+        # Retry the request
+        #print("Exception")
+        return self._retry(request, exception, spider) or self._retry(request, exception, spider)
+       # return super().process_exception(request, exception, spider)
+    
+    # def process_response(self, request, response, spider):
+    #     r= response.json()
+    #     try:
+    #         data = r['info']
+    #     except KeyError as e:
+    #         print("Error caught be midd")
+    #         reason = 'redirect %d' %response.status
+    #         return self._retry(request, reason, spider) or response
+            

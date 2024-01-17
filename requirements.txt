@@ -1,4 +1,5 @@
 attrs==23.1.0
+scrapy-inline-requests
 Automat==22.10.0
 certifi==2023.7.22
 cffi==1.15.1
@@ -36,7 +37,7 @@ service-identity==23.1.0
 six==1.16.0
 tldextract==3.4.4
 Twisted==22.10.0
-twisted-iocpsupport==1.0.4
+#twisted-iocpsupport==1.0.4
 typing_extensions==4.7.1
 tzdata==2023.3
 urllib3==2.0.4

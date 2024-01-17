@@ -6,9 +6,29 @@
 import scrapy
 
 
+# - Product name Arabic
+
+# - ⁠Product name English
+
+# - ⁠SKU
+
+# - ⁠description Arabic
+
+# - ⁠description English
+
+# - ⁠images
+
 class SheinItem(scrapy.Item):
     # define the fields for your item here like:
     link = scrapy.Field()
+    product_name_arabic = scrapy.Field()
+    product_name_eng = scrapy.Field()
+    category = scrapy.Field()
+    sku = scrapy.Field()
+    color = scrapy.Field()
+    column1 = scrapy.Field()
+    desc_ar = scrapy.Field()
+    desc_en =  scrapy.Field()
     main_image= scrapy.Field()
     image1=scrapy.Field()
     image2=scrapy.Field()
