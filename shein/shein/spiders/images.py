@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 API_KEY = 'ff3cc8159137f06335075d726050e683'
 
 
-df = pd.read_excel('shein_sample.xlsx')
+df = pd.read_excel('shein.xlsx')
 
 #urls = df['link'].values.tolist()
 data_dict = df.to_dict('records')
@@ -29,7 +29,7 @@ class ImagesSpider(scrapy.Spider):
     }
     
     def start_requests(self):
-        for product in data_dict:
+        for product in data_dict[0:5]:
            
             target=product['link'].split('-p-')[1]
             
@@ -58,6 +58,7 @@ class ImagesSpider(scrapy.Spider):
                 'link':product['link'],
                 'sku':product['SKU'],
                 'color':product['color'],
+                'size':product['size'],
                 'column1':product['Column1'],
                 'en_link':en_link
             }
@@ -65,7 +66,9 @@ class ImagesSpider(scrapy.Spider):
 
     @inline_requests
     def parse(self, response):
-        
+        sku = response.meta.get('sku')
+        color = response.meta.get('color')
+        size = response.meta.get('size')
         slug=response.meta.get('slug')
         en_url = "https://www.shein.com/api/productInfo/quickView/get/?"
         ar_url = "https://ar.shein.com/api/productInfo/quickView/get/?"
@@ -207,6 +210,9 @@ class ImagesSpider(scrapy.Spider):
         items['product_name_eng'] = en_name
         items['category'] = category
         items['sku'] = response.meta.get('sku')
+        items['size'] = size
+        
+        items['product_code'] = f'{sku}-{size}-{color}'
         items['color'] = response.meta.get('color')
         items['column1'] = response.meta.get('column1')
         items['desc_en'] = ''.join(en_description_list)

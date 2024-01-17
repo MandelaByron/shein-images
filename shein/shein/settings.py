@@ -36,8 +36,10 @@ FEED_EXPORT_FIELDS=[
     'product_name_eng',
     'category',
     'sku',
+    'size',
     'color',
-    'column1',
+    'product_code',
+   
     'desc_ar',
     'desc_en',
     'image1',
