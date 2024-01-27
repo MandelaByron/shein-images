@@ -4,21 +4,51 @@ import json
 from ..items import SheinItem
 from inline_requests import inline_requests
 from urllib.parse import urlencode
-
+from .browser import main
+import re
+order_data = main()
 API_KEY = 'ff3cc8159137f06335075d726050e683'
+for i in  order_data:
+    print(i)
 
 
-df = pd.read_excel('shein.xlsx')
+df = pd.DataFrame(order_data)
+
+sku_list=df['SKU'].values.tolist()
+
+
+
+
+
+
+
+def extract_product_id(url):
+    # Define a regular expression pattern to match the product id in the URL
+    pattern = re.compile(r'-p-(\d+)(?:-cat-|\.)')
+
+    # Use the pattern to find the match in the URL
+    match = pattern.search(url)
+
+    # Check if a match is found
+    if match:
+        # Extract and return the product id
+        product_id = match.group(1)
+        return product_id
+    else:
+        # Return None if no match is found
+        return None
+
+#df = pd.read_excel('shein.xlsx')
 
 #urls = df['link'].values.tolist()
-data_dict = df.to_dict('records')
+#data_dict = df.to_dict('records')
 class ImagesSpider(scrapy.Spider):
     name = 'images'
     allowed_domains = ['ar.shein.com','shein.com','api.scraperapi.com']
 
     custom_settings = {
         'USER_AGENT': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36',
-        'DUPEFILTER_CLASS': 'scrapy.dupefilters.BaseDupeFilter',
+        #'DUPEFILTER_CLASS': 'scrapy.dupefilters.BaseDupeFilter',
         'ROBOTSTXT_OBEY': False,
         'FEEDS':{
             'shein_jpg_links.csv':{
@@ -29,18 +59,19 @@ class ImagesSpider(scrapy.Spider):
     }
     
     def start_requests(self):
-        for product in data_dict[0:5]:
-           
-            target=product['link'].split('-p-')[1]
+        for product in order_data:
+            slug = extract_product_id(product['link'])
+            # target=product['link'].split('-p-')[1]
             
             en_link =  product['link'].replace('ar.','')
             
+            ar_link = product['link'].replace('www','ar')
 
-            slug=target.split('-')[0]
+            # slug=target.split('-')[0]
             
             url = "https://ar.shein.com/api/productAtom/atomicInfo/get?_ver=1.1.8&_lang=ar"
 
-           
+            qty = sku_list.count(product['SKU'])
 
             payload = {
                 "atomicParams": [{"goods_id": slug}],
@@ -57,23 +88,28 @@ class ImagesSpider(scrapy.Spider):
                 'slug':slug,
                 'link':product['link'],
                 'sku':product['SKU'],
-                'color':product['color'],
-                'size':product['size'],
-                'column1':product['Column1'],
-                'en_link':en_link
+                #'color':product['color'],
+                #'size':product['size'],
+                'qty':qty,
+                'purchased_price':product['price'],
+                'en_link':en_link,
+                'ar_link':ar_link
             }
             yield scrapy.Request(method='POST',url=url,body=json.dumps(payload),headers=headers,meta=meta)
 
     @inline_requests
     def parse(self, response):
         sku = response.meta.get('sku')
-        color = response.meta.get('color')
+        
+        
+        
         size = response.meta.get('size')
+        
         slug=response.meta.get('slug')
         en_url = "https://www.shein.com/api/productInfo/quickView/get/?"
         ar_url = "https://ar.shein.com/api/productInfo/quickView/get/?"
         
-        en_payload = { 'api_key': f'{API_KEY}', 'url': f'https://www.shein.com/api/productInfo/quickView/get/?_ver=1.1.8&_lang=en&goods_id={slug}&mallCode=1&lockmall=0&isQuick=1' } 
+        en_payload = { 'api_key': f'{API_KEY}', 'url': f'https://www.shein.com/api/productInfo/quickView/get/?_ver=1.1.8&_lang=en&goods_id={slug}&mallCode=1&lockmall=0&isQuick=1','country_code':'us' } 
         ar_payload = { 'api_key': f'{API_KEY}', 'url': f'https://ar.shein.com/api/productInfo/quickView/get/?_ver=1.1.8&_lang=en&goods_id={slug}&mallCode=1&lockmall=0&isQuick=1' } 
         #{'api_key': 'APIKEY', 'url': 'https://httpbin.org/ip'}
         #querystring = {"_ver":"1.1.8","_lang":"en","goods_id":f"{slug}","mallCode":"1","lockmall":"0","isQuick":"1"}
@@ -112,14 +148,20 @@ class ImagesSpider(scrapy.Spider):
         
         category = ''
         
+        color = ''
+        
         en_description_list = []
         ar_description_list = []
+        
+        size_list = []
         try:
             en_name = en_data['info']['goods']['detail']['goods_name']
                         
             ar_name = ar_data['info']['goods']['detail']['goods_name']
             
             category = en_data['info']['goods']['currentCat']['cat_name']
+            
+            color = en_data['info']['goods']['detail']['mainSaleAttribute'][0]['attr_value']
             
             for i in en_data['info']['goods']['detail']['productDetails']:
                 key = i['attr_name']
@@ -137,6 +179,23 @@ class ImagesSpider(scrapy.Spider):
                 desc_items = f'{key}: {value}\n'
                 
                 ar_description_list.append(desc_items)
+            
+              
+            size_data = en_data['info']['goods']['attrSizeList']['sale_attr_list'][f'{slug}']['sku_list']
+            for counter, i in enumerate(size_data):
+                stock = i['stock']
+                try:
+                    size_name = i['sku_sale_attr'][0]['attr_value_name_en']
+                except:
+                    size_name = "one-size"
+                
+                size_list.append(
+                    {
+                        "size":size_name,
+                        "stock":stock
+                    }
+                )
+                
         except KeyError as e:
             try:
                 self.logger.error(f"KeyError: {e}. Retrying the request.")
@@ -151,7 +210,7 @@ class ImagesSpider(scrapy.Spider):
                 en_name = en_data['info']['goods']['detail']['goods_name']
                 
                 category = en_data['info']['goods']['currentCat']['cat_name']
-                            
+                color = en_data['info']['goods']['detail']['mainSaleAttribute'][0]['attr_value']       
                 ar_name = ar_data['info']['goods']['detail']['goods_name']
                 for i in en_data['info']['goods']['detail']['productDetails']:
                     key = i['attr_name']
@@ -169,8 +228,23 @@ class ImagesSpider(scrapy.Spider):
                     desc_items = f'{key}: {value}\n'
                     
                     ar_description_list.append(desc_items)
+                size_data = en_data['info']['goods']['attrSizeList']['sale_attr_list'][f'{slug}']['sku_list']
+                for counter, i in enumerate(size_data):
+                    stock = i['stock']
+                    try:
+                        size_name = i['sku_sale_attr'][0]['attr_value_name_en']
+                    except:
+                        size_name = "one-size"
+                    
+                    size_list.append(
+                        {
+                            "size":size_name,
+                            "stock":stock
+                        }
+                    )
             except KeyError as second_e:
                     self.logger.error(f"KeyError: {second_e}. Retrying the second request.")
+                    #retrying the new request
                     en_page_resp = yield scrapy.Request(en_full,headers=headers)
                 
                     ar_page_resp =  yield scrapy.Request(ar_full,headers=headers)
@@ -182,6 +256,7 @@ class ImagesSpider(scrapy.Spider):
                     en_name = en_data['info']['goods']['detail']['goods_name']
                     
                     category = en_data['info']['goods']['currentCat']['cat_name']
+                    color = en_data['info']['goods']['detail']['mainSaleAttribute'][0]['attr_value']
                                 
                     ar_name = ar_data['info']['goods']['detail']['goods_name']
                     for i in en_data['info']['goods']['detail']['productDetails']:
@@ -199,8 +274,23 @@ class ImagesSpider(scrapy.Spider):
                         
                         desc_items = f'{key}: {value}\n'
                         
-                        ar_description_list.append(desc_items)        
-                
+                        ar_description_list.append(desc_items)  
+                        
+                              
+                    size_data = en_data['info']['goods']['attrSizeList']['sale_attr_list'][f'{slug}']['sku_list']
+                    for counter, i in enumerate(size_data):
+                        stock = i['stock']
+                        try:
+                            size_name = i['sku_sale_attr'][0]['attr_value_name_en']
+                        except:
+                            size_name = "one-size"
+                        
+                        size_list.append(
+                            {
+                                "size":size_name,
+                                "stock":stock
+                            }
+                        )                
             
             
 
@@ -210,25 +300,33 @@ class ImagesSpider(scrapy.Spider):
         items['product_name_eng'] = en_name
         items['category'] = category
         items['sku'] = response.meta.get('sku')
-        items['size'] = size
+        items['price'] = response.meta.get('purchased_price')
+        items['qty'] = response.meta.get('qty')
+        items['color'] = color
         
-        items['product_code'] = f'{sku}-{size}-{color}'
-        items['color'] = response.meta.get('color')
-        items['column1'] = response.meta.get('column1')
+        
+        
+        
         items['desc_en'] = ''.join(en_description_list)
         items['desc_ar'] = ''.join(ar_description_list)
         
         
         data = response.json()
         main_image = data['data'][f'{slug}']['main_image']['origin_image']
-        for counter , i in enumerate(data['data'][f'{slug}']['detail_image'],start=1):
-            image_url=i['origin_image']
-            image_url=image_url.strip().replace('//','')
+        items['image1']= 'https://' + main_image.replace('//','')
+        
+        for size in size_list:
+            for counter , i in enumerate(data['data'][f'{slug}']['detail_image'],start=2):
+                if counter <= 10:
+                    image_url=i['origin_image']
+                    image_url=image_url.strip().replace('//','')
+                    #size = size['size']
+                    items['link'] = response.meta.get('link')
+                    items[f'image{counter}'] = 'https://' + image_url
+                    items['product_code'] = f"{sku}-{size['size']}-{color}"#checkig
+                    items['size'] = size['size']
+                    items['stock'] = size['stock']
             
-            items['link'] = response.meta.get('link')
-            items[f'image{counter}'] = image_url
-            
-        items['main_image']= main_image.replace('//','')
         yield items
 
  

@@ -31,7 +31,7 @@ FEED_EXPORT_ENCODING = "utf-8"
 FEED_EXPORT_FIELDS=[
     
     'link',
-    'main_image',
+    
     'product_name_arabic',
     'product_name_eng',
     'category',
@@ -39,7 +39,8 @@ FEED_EXPORT_FIELDS=[
     'size',
     'color',
     'product_code',
-   
+    'price',
+    'qty',
     'desc_ar',
     'desc_en',
     'image1',
