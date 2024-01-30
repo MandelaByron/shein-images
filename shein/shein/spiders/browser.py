@@ -80,7 +80,8 @@ def login(driver, email, password):
     driver.execute_script("arguments[0].scrollIntoView();", finish_button)
     finish_button.click()
 
-    WebDriverWait(driver, 15).until(
+    driver.save_screenshot('screenshot.png')
+    WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//div[@class="skip"]/span'))
     ).click()
     

@@ -1,4 +1,4 @@
-order_detail_page = 'https://www.shein.com/user/orders/detail/GSHNBE13R00N8U1'
+order_detail_page = 'https://www.shein.com/user/orders/detail/GSHNF213A000495'
 
 login_email = 'slinky9111@gmail.com'
 
