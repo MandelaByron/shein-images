@@ -11,9 +11,9 @@ import time
 import json
 import os
 import requests
-
+from urllib.parse import urlencode
 from .config import login_password, login_email, order_detail_page
-
+from collections import defaultdict
 
 
 
@@ -25,8 +25,7 @@ def save_cookies(driver):
     for cookie in selenium_cookies:
         cookies[cookie['name']] = cookie['value']
         
-    with open('cookies_mod.json','w') as fp:
-        json.dump(cookies,fp)
+    return cookies
     
     
 def move_cursor_randomly(driver):
@@ -72,8 +71,9 @@ def login(driver, email, password):
         EC.presence_of_element_located((By.XPATH, '//div[@class="main-content"]/div/div[@class="input_filed-text"]/div[@class="sui-input"]/input[@class="sui-input__inner sui-input__inner-suffix"]'))
     )
     driver.execute_script("arguments[0].scrollIntoView();", password_input)
-    #time.sleep(8)
+    time.sleep(4)
     password_input.click()
+    
     password_input.send_keys(password)
 
     finish_button = driver.find_element(By.XPATH, '//div[4]/div[8]/div[1]/button[@class="sui-button-common sui-button-common__primary sui-button-common__H44PX page__login_mainButton"]')
@@ -81,28 +81,70 @@ def login(driver, email, password):
     finish_button.click()
 
     driver.save_screenshot('screenshot.png')
+    #time.sleep(80)
     WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//div[@class="skip"]/span'))
     ).click()
     
     time.sleep(5)
     
-    links = driver.find_elements(By.XPATH,'//table[@class="c-order-detail-table new-order-table"]/tbody/tr/td[1]/div/div[@class="info"]/span/p/a')
-    qty = driver.find_elements(By.XPATH,'//table[@class="c-order-detail-table new-order-table"]/tbody/tr/td[2]')
-    sku = driver.find_elements(By.XPATH,'//table[@class="c-order-detail-table new-order-table"]/tbody/tr/td[3]')
-    prices = driver.find_elements(By.XPATH,"//table[@class='c-order-detail-table new-order-table']/tbody/tr/td[4]/div/span[contains(@class,'struct-price__dis')]")
+    print("Successfully logged in")
+    driver.save_screenshot('login_screenshot.png')
+    
+    # links = driver.find_elements(By.XPATH,'//table[@class="c-order-detail-table new-order-table"]/tbody/tr/td[1]/div/div[@class="info"]/span/p/a')
+    # qty = driver.find_elements(By.XPATH,'//table[@class="c-order-detail-table new-order-table"]/tbody/tr/td[2]')
+    # sku = driver.find_elements(By.XPATH,'//table[@class="c-order-detail-table new-order-table"]/tbody/tr/td[3]')
+    # prices = driver.find_elements(By.XPATH,"//table[@class='c-order-detail-table new-order-table']/tbody/tr/td[4]/div/span[contains(@class,'struct-price__dis')]")
     
     items_list = []
 
-    # Iterate through the elements and create dictionaries
-    for link, quantity, sku, price in zip(links, qty, sku, prices):
-        item_dict = {
-            'link': link.get_attribute('href'),
-            'qty': quantity.text.strip(),
-            'SKU': sku.text.strip(),
-            'price': price.text.strip()
-        }
-        items_list.append(item_dict)
+    # # Iterate through the elements and create dictionaries
+    # for link, quantity, sku, price in zip(links, qty, sku, prices):
+    #     item_dict = {
+    #         'link': link.get_attribute('href'),
+    #         'qty': quantity.text.strip(),
+    #         'SKU': sku.text.strip(),
+    #         'price': price.text.strip()
+    #     }
+    #     items_list.append(item_dict)
+        
+    rows = driver.find_elements(By.XPATH, '//table[@class="c-order-detail-table new-order-table"]/tbody/tr')
+
+    items_list = []
+    
+    for row in rows:
+        try:
+            # Find elements within each row
+            link = row.find_element(By.XPATH, './/td[1]/div/div[@class="info"]/span/p/a')
+            quantity = row.find_element(By.XPATH, './/td[2]')
+            sku = row.find_element(By.XPATH, './/td[3]')
+            price = row.find_element(By.XPATH, './/td[4]/div/span[contains(@class,"struct-price__dis")]')
+            #identifiers = []
+            try:
+                size =  row.find_element(By.XPATH,'.//p[@class="size-info"]/span/span[2]')
+                size = size.text.strip()
+
+            except:
+                size = 'one-size'
+                
+                
+
+
+                
+            item_dict = {
+                'link': link.get_attribute('href'),
+                'qty': quantity.text.strip(),
+                'SKU': sku.text.strip(),
+                'price': price.text.strip(),
+                'size':size
+            }
+            
+           
+ 
+                         
+            items_list.append(item_dict)
+        except Exception as e:
+            print(f"Error processing a row: {str(e)}")
     
 
     return items_list
@@ -125,12 +167,14 @@ def main():
 
     data = login(driver,email=email,password=password)
     
+    cookies = save_cookies(driver=driver)
+    
     driver.quit()
     
-    return data
+    return data , cookies
     
 
-  
+
 
 
 
